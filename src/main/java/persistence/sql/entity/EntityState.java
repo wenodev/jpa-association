@@ -22,7 +22,11 @@ class EntityState {
             return false;
         }
 
-        return cacheEntry.isDirty();
+        if (status == Status.SAVING) {
+            return true;
+        }
+
+        return  cacheEntry.isDirty();
     }
 
     void makeDeleted() {
