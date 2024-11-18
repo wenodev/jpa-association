@@ -52,6 +52,27 @@ class SessionTest {
         server.stop();
     }
 
+    @DisplayName("연관관계가 있는 엔티티를 저장할 수 있다.")
+    @Test
+    void persistWithAssociation() {
+        // given
+        final OrderItem item1 = new OrderItem(1L, "Product 1", 2);
+        final OrderItem item2 = new OrderItem(2L, "Product 2", 3);
+        final Order order = new Order(1L, "ORDER-1", List.of(item1, item2));
+
+        // when
+        entityManager.persist(order);
+        entityManager.flush();
+
+        // then
+        final Order foundOrder = entityManager.find(Order.class, 1L);
+        assertThat(foundOrder.getOrderNumber()).isEqualTo("ORDER-1");
+        assertThat(foundOrder.getOrderItems())
+                .hasSize(2)
+                .flatExtracting(OrderItem::getProduct, OrderItem::getQuantity)
+                .containsExactlyInAnyOrder("Product 1", 2, "Product 2", 3);
+    }
+
     @DisplayName("연관관계가 있는 엔티티를 조회할 수 있다.")
     @Test
     void findWithAssociation() {
