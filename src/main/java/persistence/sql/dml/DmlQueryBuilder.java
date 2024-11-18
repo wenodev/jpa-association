@@ -60,8 +60,7 @@ public class DmlQueryBuilder {
     public String selectMaxId(final Class<?> clazz) {
         final String tableName = new TableName(clazz).value();
         final String idColumnName = new IdColumnName(clazz).getIdColumnName();
-        final String formatted = SELECT_MAX_ID_TEMPLATE.formatted(idColumnName, tableName);
-        return formatted;
+        return SELECT_MAX_ID_TEMPLATE.formatted(idColumnName, tableName);
     }
 
     public String select(final Class<?> clazz) {
@@ -126,8 +125,7 @@ public class DmlQueryBuilder {
 
     private String formatColumns(final Class<?> clazz) {
         final List<String> columns = new ColumnName(clazz).value();
-        return columns.stream()
-                .collect(Collectors.joining(", "));
+        return String.join(", ", columns);
     }
 
     private String formatSqlValues(final List<Object> value) {
