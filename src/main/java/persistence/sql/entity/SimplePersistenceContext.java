@@ -6,7 +6,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-class PersistenceContext {
+class SimplePersistenceContext {
     private final Map<CacheKey, EntityState> entityStates = new HashMap<>();
 
     Optional<Object> getEntity(final CacheKey key) {

@@ -43,7 +43,7 @@ class SessionTest {
         createTableAndVerify(Order.class);
         final EntityPersister entityPersister = new EntityPersister(jdbcTemplate, dmlQueryBuilder);
         final EntityLoader entityLoader = new EntityLoader(jdbcTemplate, dmlQueryBuilder);
-        final PersistenceContext persistenceContext = new PersistenceContext();
+        final SimplePersistenceContext persistenceContext = new SimplePersistenceContext();
         entityManager = new Session(entityPersister, entityLoader, persistenceContext);
     }
 
