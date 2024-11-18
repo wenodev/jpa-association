@@ -44,4 +44,13 @@ public class Order {
     public List<OrderItem> getOrderItems() {
         return orderItems;
     }
+
+    @Override
+    public String toString() {
+        return "Order{" +
+               "id=" + id +
+               ", orderNumber='" + orderNumber + '\'' +
+               ", orderItems=" + orderItems +
+               '}';
+    }
 }
