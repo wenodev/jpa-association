@@ -19,10 +19,11 @@ public class DmlQueryBuilder {
     private static final String DELETE_TEMPLATE = "DELETE FROM %s WHERE %s = %s;";
     private static final String UPDATE_TEMPLATE = "UPDATE %s SET %s WHERE %s = %s;";
     private static final String SELECT_WITH_JOIN_TEMPLATE = """
-            SELECT p.id, p.order_number, c.id, c.product, c.quantity
+            SELECT %s
             FROM %s p
             JOIN %s c ON p.id = c.%s
             WHERE p.id = %s;""";
+
 
     public String update(final Class<?> clazz, final Object entity, final Long id) {
         final String tableName = new TableName(clazz).value();
@@ -35,16 +36,6 @@ public class DmlQueryBuilder {
                 idColumnName,
                 formatSqlValue(id)
         );
-    }
-
-    private String formatSetClause(final Object entity) {
-        final Map<String, Object> updateValues = new UpdateValues().value(entity);
-
-        return updateValues.entrySet().stream()
-                .map(entry -> String.format("%s = %s",
-                        entry.getKey(),
-                        formatSqlValue(entry.getValue())))
-                .collect(Collectors.joining(", "));
     }
 
     public String delete(final Class<?> clazz, final Long id) {
@@ -82,6 +73,24 @@ public class DmlQueryBuilder {
         );
     }
 
+    public String insert(final Class<?> clazz, final Object object) {
+        final String tableName = new TableName(clazz).value();
+        final String columns = formatColumns(clazz);
+        final List<Object> value = new InsertValues().value(object);
+
+        return String.format(INSERT_TEMPLATE, tableName, columns, formatSqlValues(value));
+    }
+
+    private String formatSetClause(final Object entity) {
+        final Map<String, Object> updateValues = new UpdateValues().value(entity);
+
+        return updateValues.entrySet().stream()
+                .map(entry -> String.format("%s = %s",
+                        entry.getKey(),
+                        formatSqlValue(entry.getValue())))
+                .collect(Collectors.joining(", "));
+    }
+
     private boolean hasOneToManyAssociation(final Class<?> clazz) {
         return Arrays.stream(clazz.getDeclaredFields())
                 .anyMatch(field -> field.isAnnotationPresent(OneToMany.class));
@@ -89,14 +98,25 @@ public class DmlQueryBuilder {
 
     private String buildJoinQuery(final Class<?> clazz, final Long id) {
         final Field joinField = findOneToManyField(clazz);
-        final String childTable = getChildTableName(joinField);
-        final String joinColumnName = getJoinColumnName(joinField);
+        final Class<?> childType = getChildType(joinField);
+
+        final String columns = new JoinColumnName(clazz, childType).selectColumns();
+        final String parentTable = new TableName(clazz).value();
+        final String childTable = new TableName(childType).value();
+        final String joinColumnName = joinField.getAnnotation(JoinColumn.class).name();
+
         return SELECT_WITH_JOIN_TEMPLATE.formatted(
-                new TableName(clazz).value(),
+                columns,
+                parentTable,
                 childTable,
                 joinColumnName,
                 formatSqlValue(id)
         );
+    }
+
+    private Class<?> getChildType(final Field field) {
+        return (Class<?>) ((ParameterizedType) field.getGenericType())
+                .getActualTypeArguments()[0];
     }
 
     private Field findOneToManyField(final Class<?> clazz) {
@@ -104,23 +124,6 @@ public class DmlQueryBuilder {
                 .filter(field -> field.isAnnotationPresent(OneToMany.class))
                 .findFirst()
                 .orElseThrow(() -> new IllegalStateException("No @OneToMany association found"));
-    }
-
-    private String getChildTableName(final Field field) {
-        final Class<?> childType = (Class<?>) ((ParameterizedType) field.getGenericType()).getActualTypeArguments()[0];
-        return new TableName(childType).value();
-    }
-
-    private String getJoinColumnName(final Field field) {
-        return field.getAnnotation(JoinColumn.class).name();
-    }
-
-    public String insert(final Class<?> clazz, final Object object) {
-        final String tableName = new TableName(clazz).value();
-        final String columns = formatColumns(clazz);
-        final List<Object> value = new InsertValues().value(object);
-
-        return String.format(INSERT_TEMPLATE, tableName, columns, formatSqlValues(value));
     }
 
     private String formatColumns(final Class<?> clazz) {
