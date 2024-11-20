@@ -18,30 +18,25 @@ class SelectQueryBuilder {
             WHERE p.id = %s;""";
 
     private final Class<?> entityClass;
-    private final Long id;
 
     SelectQueryBuilder(final Class<?> entityClass) {
-        this(entityClass, null);
-    }
-
-    SelectQueryBuilder(final Class<?> entityClass, final Long id) {
         this.entityClass = entityClass;
-        this.id = id;
     }
 
     String build() {
-        if (id == null) {
-            return SELECT_ALL_TEMPLATE.formatted(new TableName(entityClass).value());
-        }
-
-        if (hasOneToManyAssociation(entityClass)) {
-            return buildJoinQuery();
-        }
-
-        return buildSimpleSelectById();
+        final String name = new TableName(entityClass).value();
+        return SELECT_ALL_TEMPLATE.formatted(name);
     }
 
-    private String buildSimpleSelectById() {
+    String build(final Long id) {
+        if (hasOneToManyAssociation(entityClass)) {
+            return buildJoinQuery(id);
+        }
+
+        return buildSimpleSelectById(id);
+    }
+
+    private String buildSimpleSelectById(final Long id) {
         final String tableName = new TableName(entityClass).value();
         final String idColumnName = new IdColumnName(entityClass).getIdColumnName();
         return SELECT_BY_ID_TEMPLATE.formatted(
@@ -51,7 +46,7 @@ class SelectQueryBuilder {
         );
     }
 
-    private String buildJoinQuery() {
+    private String buildJoinQuery(final Long id) {
         final Field joinField = findOneToManyField(entityClass);
         final Class<?> childType = getChildType(joinField);
 

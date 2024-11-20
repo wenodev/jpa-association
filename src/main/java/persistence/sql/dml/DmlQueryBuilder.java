@@ -10,7 +10,7 @@ public class DmlQueryBuilder {
     }
 
     public String select(final Class<?> clazz, final Long id) {
-        return new SelectQueryBuilder(clazz, id).build();
+        return new SelectQueryBuilder(clazz).build(id);
     }
 
     public String insert(final Class<?> clazz, final Object entity) {
