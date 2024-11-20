@@ -18,18 +18,21 @@ class SelectQueryBuilder {
             WHERE p.id = %s;""";
 
     private final Class<?> entityClass;
+    private final boolean hasOneToMany;
+    private final String tableName;
 
     SelectQueryBuilder(final Class<?> entityClass) {
         this.entityClass = entityClass;
+        this.hasOneToMany = hasOneToManyAssociation(entityClass);
+        this.tableName = new TableName(entityClass).value();
     }
 
     String build() {
-        final String name = new TableName(entityClass).value();
-        return SELECT_ALL_TEMPLATE.formatted(name);
+        return SELECT_ALL_TEMPLATE.formatted(tableName);
     }
 
     String build(final Long id) {
-        if (hasOneToManyAssociation(entityClass)) {
+        if (hasOneToMany) {
             return buildJoinQuery(id);
         }
 
@@ -37,7 +40,6 @@ class SelectQueryBuilder {
     }
 
     private String buildSimpleSelectById(final Long id) {
-        final String tableName = new TableName(entityClass).value();
         final String idColumnName = new IdColumnName(entityClass).getIdColumnName();
         return SELECT_BY_ID_TEMPLATE.formatted(
                 tableName,
