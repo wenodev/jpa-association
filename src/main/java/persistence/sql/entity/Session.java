@@ -7,11 +7,11 @@ import java.util.Optional;
 public class Session implements EntityManager {
     private final EntityPersister entityPersister;
     private final EntityLoader entityLoader;
-    private final PersistenceContext persistenceContext;
+    private final SimplePersistenceContext persistenceContext;
 
     public Session(final EntityPersister entityPersister,
                    final EntityLoader entityLoader,
-                   final PersistenceContext persistenceContext) {
+                   final SimplePersistenceContext persistenceContext) {
         this.entityPersister = entityPersister;
         this.entityLoader = entityLoader;
         this.persistenceContext = persistenceContext;

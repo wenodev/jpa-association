@@ -13,8 +13,14 @@ public class EntityPersister {
     }
 
     void insert(final Object entity) {
-        final String insert = dmlQueryBuilder.insert(entity.getClass(), entity);
-        jdbcTemplate.execute(insert);
+        try {
+            final EntityAssociation entityAssociation = new EntityAssociation(entity);
+            final Object entityToInsert = entityAssociation.removeAssociations();
+            final String insert = dmlQueryBuilder.insert(entityToInsert.getClass(), entityToInsert);
+            jdbcTemplate.execute(insert);
+        } catch (final Exception e) {
+            throw new RuntimeException("Failed to insert entity", e);
+        }
     }
 
     void update(final Object entity) {

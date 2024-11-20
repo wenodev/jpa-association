@@ -9,6 +9,8 @@ import org.junit.jupiter.api.Test;
 import persistence.TestJdbcTemplate;
 import persistence.sql.ddl.DdlQueryBuilder;
 import persistence.sql.ddl.H2Dialect;
+import persistence.sql.ddl.Order;
+import persistence.sql.ddl.OrderItem;
 import persistence.sql.ddl.Person;
 import persistence.sql.dml.DmlQueryBuilder;
 
@@ -33,17 +35,66 @@ class SessionTest {
         jdbcTemplate = new TestJdbcTemplate(connection);
         ddlQueryBuilder = new DdlQueryBuilder(new H2Dialect());
         dmlQueryBuilder = new DmlQueryBuilder();
-        deleteIfTableExists();
-        createTableAndVerify();
+        deleteIfTableExists(Person.class);
+        createTableAndVerify(Person.class);
+        deleteIfTableExists(OrderItem.class);
+        createTableAndVerify(OrderItem.class);
+        deleteIfTableExists(Order.class);
+        createTableAndVerify(Order.class);
         final EntityPersister entityPersister = new EntityPersister(jdbcTemplate, dmlQueryBuilder);
         final EntityLoader entityLoader = new EntityLoader(jdbcTemplate, dmlQueryBuilder);
-        final PersistenceContext persistenceContext = new PersistenceContext();
+        final SimplePersistenceContext persistenceContext = new SimplePersistenceContext();
         entityManager = new Session(entityPersister, entityLoader, persistenceContext);
     }
 
     @AfterEach
     void tearDown() {
         server.stop();
+    }
+
+    @DisplayName("연관관계가 있는 엔티티를 저장할 수 있다.")
+    @Test
+    void persistWithAssociation() {
+        // given
+        final OrderItem item1 = new OrderItem(1L, "Product 1", 2);
+        final OrderItem item2 = new OrderItem(2L, "Product 2", 3);
+        final Order order = new Order(1L, "ORDER-1", List.of(item1, item2));
+
+        // when
+        entityManager.persist(order);
+        entityManager.flush();
+
+        // then
+        final Order foundOrder = entityManager.find(Order.class, 1L);
+        assertThat(foundOrder.getOrderNumber()).isEqualTo("ORDER-1");
+        assertThat(foundOrder.getOrderItems())
+                .hasSize(2)
+                .flatExtracting(OrderItem::getProduct, OrderItem::getQuantity)
+                .containsExactlyInAnyOrder("Product 1", 2, "Product 2", 3);
+    }
+
+    @DisplayName("연관관계가 있는 엔티티를 조회할 수 있다.")
+    @Test
+    void findWithAssociation() {
+        // given
+        final OrderItem item1 = new OrderItem(1L, "Product 1", 2);
+        final OrderItem item2 = new OrderItem(2L, "Product 2", 3);
+        entityManager.persist(item1);
+        entityManager.persist(item2);
+
+        final Order order = new Order(1L, "ORDER-1", List.of(item1, item2));
+        entityManager.persist(order);
+        entityManager.flush();
+
+        // when
+        final Order foundOrder = entityManager.find(Order.class, order.getId());
+
+        // then
+        assertThat(foundOrder.getOrderNumber()).isEqualTo("ORDER-1");
+        assertThat(foundOrder.getOrderItems())
+                .hasSize(2)
+                .flatExtracting(OrderItem::getProduct, OrderItem::getQuantity)
+                .containsExactlyInAnyOrder("Product 1", 2, "Product 2", 3);
     }
 
     @DisplayName("더티 체크가 잘 동작하는지 검증한다.")
@@ -106,23 +157,23 @@ class SessionTest {
         assertThat(query).hasSize(0);
     }
 
-    private void createTableAndVerify() {
-        createTable();
-        assertTableCreated();
+    private void createTableAndVerify(final Class<?> clazz) {
+        createTable(clazz);
+        assertTableCreated(clazz);
     }
 
-    private void assertTableCreated() {
-        assertTrue(jdbcTemplate.doesTableExist(Person.class), "Table was not created.");
+    private void assertTableCreated(final Class<?> clazz) {
+        assertTrue(jdbcTemplate.doesTableExist(clazz), "Table was not created.");
     }
 
-    private void createTable() {
-        final String createSql = ddlQueryBuilder.create(Person.class);
+    private void createTable(final Class<?> clazz) {
+        final String createSql = ddlQueryBuilder.create(clazz);
         jdbcTemplate.execute(createSql);
     }
 
-    private void deleteIfTableExists() {
-        if (jdbcTemplate.doesTableExist(Person.class)) {
-            final String dropSql = ddlQueryBuilder.drop(Person.class);
+    private void deleteIfTableExists(final Class<?> clazz) {
+        if (jdbcTemplate.doesTableExist(clazz)) {
+            final String dropSql = ddlQueryBuilder.drop(clazz);
             jdbcTemplate.execute(dropSql);
         }
     }
