@@ -12,6 +12,7 @@ public class HelloHandler implements InvocationHandler {
 
     @Override
     public Object invoke(final Object proxy, final Method method, final Object[] args) throws Throwable {
-        return method.invoke(hello, args);
+        final String result = (String) method.invoke(hello, args);
+        return result.toUpperCase();
     }
 }
